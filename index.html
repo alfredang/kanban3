@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UOB IT PMO — Project Kanban (Demo)</title>
+<title>UOB IT PMO — Project Delivery Board (Demo)</title>
 
 <!--
   Internal demo / training tool. Not an official system.
@@ -14,35 +14,54 @@
 <style>
 /* ============================================================
    1. DESIGN TOKENS
+   ------------------------------------------------------------
+   Red is both the house colour and the risk colour here, so the
+   two registers are split on purpose: oxblood and crimson carry
+   structure and brand, ember is reserved for Critical priority
+   alone, and anything meaning "at risk" is ochre so it stays
+   readable against a red interface instead of dissolving into it.
    ============================================================ */
 :root {
-  /* Corporate blue palette */
-  --blue-900: #0b2545;
-  --blue-800: #12345c;
-  --blue-700: #1a4d8f;
-  --blue-600: #2166b0;
-  --blue-100: #e3edf8;
-  --blue-050: #f2f7fc;
+  /* Brand reds */
+  --ox-900: #4a0e17;
+  --ox-800: #601020;
+  --ox-700: #7b1524;
+  --crimson: #b3182c;
+  --crimson-ink: #8d1222;
+  --red-100: #f6dfe1;
+  --red-050: #fdf4f4;
 
-  /* Neutrals */
-  --ink:        #16202c;
-  --ink-muted:  #5a6876;
-  --line:       #d9e1ea;
-  --surface:    #ffffff;
-  --canvas:     #eef2f7;
+  /* Reserved: Critical priority only */
+  --ember: #d7263d;
 
-  /* Priority colours (always paired with text, never colour alone) */
-  --prio-critical: #c0392b;
-  --prio-high:     #d98200;
-  --prio-medium:   var(--blue-600);
-  --prio-low: #8a939c;
+  /* Warm neutrals, pulled toward the red family */
+  --ink:       #2a1d20;
+  --ink-muted: #6d5a5d;
+  --line:      #e3d6d7;
+  --line-soft: #efe6e6;
+  --surface:   #ffffff;
+  --canvas:    #f5efee;
+
+  /* Priority colours (always paired with the label, never colour alone) */
+  --prio-critical: var(--ember);
+  --prio-high:     #b3182c;
+  --prio-medium:   #8a6a3f;
+  --prio-low:      #9b8b8d;
 
   /* Semantic */
-  --danger:  #c0392b;
-  --warn:    #9a6400;
-  --warn-bg: #fdf3dd;
-  --ok:      #1d7a4c;
-  --ok-bg:   #e6f5ec;
+  --danger:    #b3182c;
+  --risk:      #a85b00;
+  --risk-bg:   #fdf1df;
+  --risk-line: #eccf9f;
+  --ok:        #1f6f4f;
+  --ok-bg:     #e8f3ed;
+  --ok-line:   #bcdcca;
+
+  /* Status accents shared by the chart, the KPI rail and the columns */
+  --st-backlog:  #b9a6a8;
+  --st-progress: #b3182c;
+  --st-blocked:  #4a0e17;
+  --st-done:     #4f8f72;
 
   /* Spacing scale */
   --sp-1: 4px;
@@ -56,8 +75,9 @@
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 12px;
-  --shadow-1: 0 1px 2px rgba(11, 37, 69, .08), 0 1px 3px rgba(11, 37, 69, .06);
-  --shadow-2: 0 4px 12px rgba(11, 37, 69, .14);
+  --shadow-1: 0 1px 2px rgba(74, 14, 23, .07), 0 1px 3px rgba(74, 14, 23, .05);
+  --shadow-2: 0 6px 18px rgba(74, 14, 23, .16);
+  --shadow-lift: 0 10px 26px rgba(74, 14, 23, .18);
 
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
@@ -86,7 +106,7 @@ button, input, select, textarea {
 
 /* Visible focus ring everywhere */
 :focus-visible {
-  outline: 3px solid var(--blue-600);
+  outline: 3px solid var(--ember);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -102,12 +122,21 @@ button, input, select, textarea {
 }
 
 /* ============================================================
-   3. HEADER + SUMMARY STRIP
+   3. HEADER BAND
+   ------------------------------------------------------------
+   Deliberately over-tall: the KPI rail straddles its bottom edge,
+   which is the one structural flourish on the page.
    ============================================================ */
 .app-header {
-  background: var(--blue-900);
+  background-color: var(--ox-900);
+  background-image: linear-gradient(105deg, #4a0e17 0%, #601020 58%, #7b1524 100%);
   color: #fff;
-  padding: var(--sp-4) var(--sp-5);
+  padding: var(--sp-5) var(--sp-5) 78px;
+}
+
+.header-inner {
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .header-top {
@@ -119,62 +148,136 @@ button, input, select, textarea {
 }
 
 .wordmark {
-  font-size: 18px;
-  letter-spacing: .04em;
+  font-size: 20px;
+  letter-spacing: .06em;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
 .wordmark .wordmark-sub {
+  display: block;
   font-weight: 400;
   text-transform: none;
-  letter-spacing: 0;
-  opacity: .75;
-  font-size: 13px;
-  margin-left: var(--sp-2);
+  letter-spacing: .01em;
+  font-size: 14px;
+  margin-top: 2px;
+  color: #f0cfd3;
 }
 
 .demo-note {
   font-size: 12px;
-  color: #b9cbe2;
-  margin: var(--sp-2) 0 0;
+  color: #e6c6ca;
+  margin: 0;
+  max-width: 64ch;
 }
 
-.summary {
+.header-notes {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-top: var(--sp-3);
-  padding: 0;
-  list-style: none;
-}
-
-.summary li {
-  background: rgba(255, 255, 255, .1);
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 999px;
-  padding: var(--sp-1) var(--sp-3);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.summary li b { font-weight: 700; }
-
-.summary li.is-overdue {
-  background: rgba(192, 57, 43, .28);
-  border-color: rgba(255, 175, 165, .5);
+  gap: var(--sp-2) var(--sp-5);
+  margin-top: var(--sp-4);
 }
 
 /* ============================================================
-   4. LAYOUT
+   4. KPI RAIL - the prominent portfolio read
+   ============================================================ */
+.kpi-rail {
+  max-width: 1600px;
+  margin: -62px auto 0;
+  padding: 0 var(--sp-5);
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--sp-3);
+  position: relative;
+  z-index: 2;
+  list-style: none;
+}
+
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--st-backlog);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lift);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  min-height: 132px;
+}
+
+.kpi-value {
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ox-900);
+}
+
+.kpi-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: var(--sp-2);
+}
+
+.kpi-sub {
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-share {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.kpi-share span {
+  display: block;
+  height: 100%;
+  background: var(--st-backlog);
+  border-radius: 999px;
+}
+
+.kpi[data-kpi="Total"] { border-top-color: var(--ox-900); }
+.kpi[data-kpi="Total"] .kpi-share span { background: var(--ox-900); }
+.kpi[data-kpi="In Progress"] { border-top-color: var(--st-progress); }
+.kpi[data-kpi="In Progress"] .kpi-share span { background: var(--st-progress); }
+.kpi[data-kpi="Blocked"] { border-top-color: var(--st-blocked); }
+.kpi[data-kpi="Blocked"] .kpi-share span { background: var(--st-blocked); }
+.kpi[data-kpi="Done"] { border-top-color: var(--st-done); }
+.kpi[data-kpi="Done"] .kpi-share span { background: var(--st-done); }
+
+.kpi[data-kpi="Overdue"] {
+  border-color: var(--risk-line);
+  border-top-color: var(--risk);
+  background: var(--risk-bg);
+}
+.kpi[data-kpi="Overdue"] .kpi-value { color: var(--risk); }
+.kpi[data-kpi="Overdue"] .kpi-share { background: #f0dcba; }
+.kpi[data-kpi="Overdue"] .kpi-share span { background: var(--risk); }
+
+/* ============================================================
+   5. LAYOUT
    ============================================================ */
 .layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: var(--sp-5);
   align-items: start;
   padding: var(--sp-5);
   max-width: 1600px;
   margin: 0 auto;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
 }
 
 .panel {
@@ -187,12 +290,141 @@ button, input, select, textarea {
 .panel-title {
   font-size: 14px;
   padding: var(--sp-3) var(--sp-4);
-  border-bottom: 1px solid var(--line);
-  color: var(--blue-900);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ox-900);
+}
+
+.panel-title .panel-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  margin-top: 2px;
 }
 
 /* ============================================================
-   5. FORM PANEL
+   6. PORTFOLIO CHART - one stacked bar per project
+   ------------------------------------------------------------
+   Counts every task rather than the filtered view, so the
+   portfolio read stays stable while the board is filtered.
+   Each row is a button that filters the board to that project.
+   ============================================================ */
+.chart-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.swatch[data-status="Backlog"]     { background: var(--st-backlog); }
+.swatch[data-status="In Progress"] { background: var(--st-progress); }
+.swatch[data-status="Blocked"]     { background: var(--st-blocked); }
+.swatch[data-status="Done"]        { background: var(--st-done); }
+
+.chart-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: var(--sp-2);
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+
+.chart-row:hover {
+  background: var(--red-050);
+  border-color: var(--red-100);
+}
+
+.chart-row[aria-pressed="true"] {
+  background: var(--red-050);
+  border-color: var(--crimson);
+}
+
+.chart-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: 5px;
+}
+
+.chart-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.chart-total {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ox-700);
+}
+
+.chart-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.chart-seg { height: 100%; min-width: 3px; }
+
+.chart-seg[data-status="Backlog"]     { background: var(--st-backlog); }
+.chart-seg[data-status="In Progress"] { background: var(--st-progress); }
+.chart-seg[data-status="Blocked"]     { background: var(--st-blocked); }
+.chart-seg[data-status="Done"]        { background: var(--st-done); }
+
+.chart-foot {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-foot .at-risk {
+  color: var(--risk);
+  font-weight: 700;
+}
+
+.chart-empty {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* ============================================================
+   7. FORM PANEL
    ============================================================ */
 .form-body { padding: var(--sp-4); }
 
@@ -202,7 +434,7 @@ button, input, select, textarea {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--blue-900);
+  color: var(--ox-900);
   margin-bottom: var(--sp-1);
 }
 
@@ -219,13 +451,14 @@ button, input, select, textarea {
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: #fff;
+  transition: border-color .18s ease;
 }
 
 .field textarea { min-height: 72px; resize: vertical; }
 
 .field input:hover,
 .field select:hover,
-.field textarea:hover { border-color: var(--blue-600); }
+.field textarea:hover { border-color: var(--crimson); }
 
 .field.has-error input,
 .field.has-error select,
@@ -245,12 +478,13 @@ button, input, select, textarea {
   border-radius: var(--r-sm);
   padding: var(--sp-2) var(--sp-4);
   cursor: pointer;
-  background: var(--blue-700);
+  background: var(--crimson);
   color: #fff;
   font-weight: 600;
+  transition: background-color .18s ease;
 }
 
-.btn:hover { background: var(--blue-600); }
+.btn:hover { background: var(--ox-700); }
 
 .btn[disabled] {
   background: var(--ink-muted);
@@ -259,17 +493,17 @@ button, input, select, textarea {
 
 .btn-secondary {
   background: #fff;
-  color: var(--blue-800);
+  color: var(--crimson-ink);
   border-color: var(--line);
   font-weight: 500;
 }
 
-.btn-secondary:hover { background: var(--blue-050); }
+.btn-secondary:hover { background: var(--red-050); }
 
-.btn-block { width: 100%; }
+.btn-block { width: 100%; padding: var(--sp-3) var(--sp-4); }
 
 /* ============================================================
-   6. FILTER BAR
+   8. FILTER BAR
    ============================================================ */
 .filters {
   margin-bottom: var(--sp-4);
@@ -283,12 +517,17 @@ button, input, select, textarea {
   align-items: flex-end;
 }
 
-.filter-field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 170px; }
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 170px;
+}
 
 .filter-field label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--blue-900);
+  color: var(--ox-900);
 }
 
 .filter-field input,
@@ -303,10 +542,11 @@ button, input, select, textarea {
   margin-left: auto;
   font-size: 12px;
   color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
-   7. BOARD + COLUMNS
+   9. BOARD + COLUMNS
    ============================================================ */
 .board {
   display: grid;
@@ -318,12 +558,17 @@ button, input, select, textarea {
 .column {
   background: var(--surface);
   border: 1px solid var(--line);
+  border-top: 3px solid var(--st-backlog);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
   display: flex;
   flex-direction: column;
-  min-height: 160px;
+  min-height: 180px;
 }
+
+.column[data-status="In Progress"] { border-top-color: var(--st-progress); }
+.column[data-status="Blocked"]     { border-top-color: var(--st-blocked); }
+.column[data-status="Done"]        { border-top-color: var(--st-done); }
 
 .column-header {
   display: flex;
@@ -331,22 +576,22 @@ button, input, select, textarea {
   justify-content: space-between;
   gap: var(--sp-2);
   padding: var(--sp-3) var(--sp-4);
-  border-bottom: 1px solid var(--line);
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
-  background: var(--blue-050);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--red-050);
 }
 
-.column-header h2 { font-size: 13px; color: var(--blue-900); }
+.column-header h2 { font-size: 13px; color: var(--ox-900); }
 
 .count-badge {
-  background: var(--blue-700);
+  background: var(--ox-900);
   color: #fff;
   border-radius: 999px;
-  min-width: 24px;
+  min-width: 26px;
   text-align: center;
-  padding: 1px var(--sp-2);
+  padding: 2px var(--sp-2);
   font-size: 12px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .dropzone {
@@ -361,19 +606,18 @@ button, input, select, textarea {
 
 /* Drop-target highlight */
 .column.drag-over .dropzone {
-  background: var(--blue-100);
-  box-shadow: inset 0 0 0 2px var(--blue-600);
+  background: var(--red-100);
+  box-shadow: inset 0 0 0 2px var(--crimson);
 }
 
 .empty-note {
   color: var(--ink-muted);
   font-size: 12px;
-  font-style: italic;
   padding: var(--sp-3) var(--sp-1);
 }
 
 /* ============================================================
-   8. CARDS
+   10. CARDS
    ============================================================ */
 .card {
   background: #fff;
@@ -383,15 +627,21 @@ button, input, select, textarea {
   padding: var(--sp-3);
   cursor: grab;
   box-shadow: var(--shadow-1);
+  transition: box-shadow .18s ease, transform .18s ease;
 }
 
-.card:hover { box-shadow: var(--shadow-2); }
+.card:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
 .card.dragging { opacity: .45; }
 
 .card[data-priority="Critical"] { border-left-color: var(--prio-critical); }
 .card[data-priority="High"]     { border-left-color: var(--prio-high); }
 .card[data-priority="Medium"]   { border-left-color: var(--prio-medium); }
 .card[data-priority="Low"]      { border-left-color: var(--prio-low); }
+
+.card[data-overdue="true"] {
+  border-color: var(--risk-line);
+  background: #fffdf8;
+}
 
 .card-top {
   display: flex;
@@ -405,6 +655,7 @@ button, input, select, textarea {
   letter-spacing: .03em;
   color: var(--ink-muted);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .card-title {
@@ -456,9 +707,9 @@ button, input, select, textarea {
   font-size: 11px;
   border-radius: var(--r-sm);
   padding: 2px var(--sp-2);
-  background: var(--blue-050);
-  border: 1px solid var(--blue-100);
-  color: var(--blue-800);
+  background: var(--red-050);
+  border: 1px solid var(--red-100);
+  color: var(--crimson-ink);
 }
 
 .badge-overdue {
@@ -466,16 +717,16 @@ button, input, select, textarea {
   font-weight: 700;
   border-radius: var(--r-sm);
   padding: 2px var(--sp-2);
-  background: #fdecea;
-  border: 1px solid #f3b9b2;
-  color: var(--danger);
+  background: var(--risk-bg);
+  border: 1px solid var(--risk-line);
+  color: var(--risk);
 }
 
 .card-actions {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  border-top: 1px dashed var(--line);
+  border-top: 1px solid var(--line-soft);
   padding-top: var(--sp-2);
 }
 
@@ -489,7 +740,7 @@ button, input, select, textarea {
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  padding: 2px var(--sp-1);
+  padding: 3px var(--sp-1);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: #fff;
@@ -505,6 +756,7 @@ button, input, select, textarea {
   cursor: pointer;
   color: var(--ink-muted);
   font-size: 15px;
+  transition: color .18s ease, border-color .18s ease;
 }
 
 .icon-btn:hover { color: var(--danger); border-color: var(--danger); }
@@ -516,28 +768,28 @@ button, input, select, textarea {
   gap: var(--sp-2);
   margin-top: var(--sp-2);
   padding: var(--sp-2);
-  background: #fdecea;
-  border: 1px solid #f3b9b2;
+  background: var(--red-050);
+  border: 1px solid var(--red-100);
   border-radius: var(--r-sm);
   font-size: 12px;
   font-weight: 600;
-  color: var(--danger);
+  color: var(--crimson-ink);
 }
 
 .confirm-row button {
   border-radius: var(--r-sm);
   border: 1px solid var(--danger);
-  padding: 1px var(--sp-2);
+  padding: 2px var(--sp-2);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
 }
 
 .confirm-yes { background: var(--danger); color: #fff; }
-.confirm-no  { background: #fff; color: var(--danger); }
+.confirm-no  { background: #fff; color: var(--crimson-ink); }
 
 /* ============================================================
-   9. TOASTS
+   11. TOASTS
    ============================================================ */
 .toast-region {
   position: fixed;
@@ -559,14 +811,27 @@ button, input, select, textarea {
   background: #fff;
 }
 
-.toast[data-kind="success"] { background: var(--ok-bg);   border-color: #b7e0c8; color: var(--ok); }
-.toast[data-kind="warn"]    { background: var(--warn-bg); border-color: #e8d29a; color: var(--warn); }
-.toast[data-kind="info"]    { background: var(--blue-050); border-color: var(--blue-100); color: var(--blue-800); }
+.toast[data-kind="success"] { background: var(--ok-bg);   border-color: var(--ok-line);   color: var(--ok); }
+.toast[data-kind="warn"]    { background: var(--risk-bg); border-color: var(--risk-line); color: var(--risk); }
+.toast[data-kind="info"]    { background: var(--red-050); border-color: var(--red-100);   color: var(--crimson-ink); }
 
 /* ============================================================
-   10. RESPONSIVE - stack below 768px
+   12. RESPONSIVE
    ============================================================ */
+@media (max-width: 1200px) {
+  .kpi-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 768px) {
+  .app-header { padding: var(--sp-4) var(--sp-4) 70px; }
+  .kpi-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 var(--sp-3);
+    gap: var(--sp-2);
+  }
+  .kpi { min-height: 110px; padding: var(--sp-3); }
+  .kpi-value { font-size: 34px; }
   .layout {
     grid-template-columns: 1fr;
     padding: var(--sp-3);
@@ -576,34 +841,71 @@ button, input, select, textarea {
   .toast-region { left: var(--sp-3); right: var(--sp-3); max-width: none; }
   .filter-field { min-width: 0; flex: 1 1 140px; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .001ms; animation-duration: .001ms; }
+  .card:hover { transform: none; }
+}
 </style>
 </head>
 
 <body>
 
 <!-- ============================================================
-     HEADER - wordmark, live summary strip, demo disclaimer
+     HEADER BAND - wordmark and demo disclaimer.
+     The KPI rail below straddles this band's bottom edge.
      ============================================================ -->
 <header class="app-header">
-  <div class="header-top">
-    <h1 class="wordmark">UOB IT PMO<span class="wordmark-sub">Project Delivery Board</span></h1>
-    <span class="demo-note">Internal demo / training tool &mdash; not an official system.</span>
+  <div class="header-inner">
+    <div class="header-top">
+      <h1 class="wordmark">UOB IT PMO<span class="wordmark-sub">Project delivery board</span></h1>
+    </div>
+
+    <div class="header-notes">
+      <p class="demo-note">Internal demo and training tool &mdash; not an official system.</p>
+      <p class="demo-note">
+        &#9432; Nothing is saved. The board lives in memory only, so refreshing returns it to the demo tasks.
+      </p>
+    </div>
   </div>
-
-  <ul class="summary" id="summary" aria-label="Board summary"></ul>
-
-  <p class="demo-note">
-    &#9432; No data is saved. Board state lives in memory only &mdash; refreshing the page resets it to the demo tasks.
-  </p>
 </header>
+
+<!-- KPI rail: counts every task on the board, ignoring filters. -->
+<ul class="kpi-rail" id="kpis" aria-label="Portfolio summary"></ul>
 
 <main class="layout">
 
+  <div class="rail">
+
   <!-- ==========================================================
-       ADD TASK FORM (sidebar panel)
+       PORTFOLIO CHART - work by project, split by status
+       ========================================================== -->
+  <section class="panel" aria-labelledby="chart-title">
+    <h2 class="panel-title" id="chart-title">
+      Work by project
+      <span class="panel-hint">Every task, busiest project first. Pick a project to filter the board.</span>
+    </h2>
+
+    <div class="chart-body">
+      <ul class="chart-legend">
+        <li><span class="swatch" data-status="Backlog"></span>Backlog</li>
+        <li><span class="swatch" data-status="In Progress"></span>In progress</li>
+        <li><span class="swatch" data-status="Blocked"></span>Blocked</li>
+        <li><span class="swatch" data-status="Done"></span>Done</li>
+      </ul>
+
+      <div class="chart-rows" id="project-chart"></div>
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       ADD TASK FORM
        ========================================================== -->
   <section class="panel" aria-labelledby="form-title">
-    <h2 class="panel-title" id="form-title">+ Add Task</h2>
+    <h2 class="panel-title" id="form-title">
+      Add a task
+      <span class="panel-hint">Lands on the board straight away; the email notice follows.</span>
+    </h2>
 
     <form class="form-body" id="add-task-form" novalidate>
 
@@ -655,9 +957,11 @@ button, input, select, textarea {
         <span class="error-text" id="err-status" role="alert"></span>
       </div>
 
-      <button type="submit" class="btn btn-block" id="submit-btn">Add Task</button>
+      <button type="submit" class="btn btn-block" id="submit-btn">Add task</button>
     </form>
   </section>
+
+  </div>
 
   <!-- ==========================================================
        FILTERS + BOARD
@@ -900,7 +1204,8 @@ function renderCard(task) {
 
   return (
     '<article class="card" draggable="true" data-id="' + escapeHtml(task.id) + '"' +
-      ' data-priority="' + escapeHtml(task.priority) + '">' +
+      ' data-priority="' + escapeHtml(task.priority) + '"' +
+      ' data-overdue="' + (overdue ? "true" : "false") + '">' +
 
       '<div class="card-top">' +
         '<span class="card-id">' + escapeHtml(task.id) + "</span>" +
@@ -961,22 +1266,105 @@ function renderBoard() {
       ? "Showing all " + total + " tasks"
       : "Showing " + visible.length + " of " + total + " tasks";
 
-  renderSummary();
+  renderKpis();
+  renderProjectChart();
 }
 
-function renderSummary() {
+/* KPI rail - deliberately counts ALL tasks, never the filtered
+   view, so the portfolio headline does not move while you filter. */
+function renderKpis() {
   const tasks = state.tasks;
+  const total = tasks.length;
   const overdue = tasks.filter(isOverdue).length;
 
-  const items = [["Total", tasks.length]]
-    .concat(STATUSES.map(s => [s, tasks.filter(t => t.status === s).length]));
+  const rows = [{ key: "Total", label: "Total tasks", value: total }]
+    .concat(STATUSES.map(s => ({
+      key: s,
+      label: s === "In Progress" ? "In progress" : s,
+      value: tasks.filter(t => t.status === s).length
+    })))
+    .concat([{ key: "Overdue", label: "Overdue", value: overdue }]);
 
-  const html = items
-    .map(([label, n]) => "<li>" + escapeHtml(label) + ": <b>" + n + "</b></li>")
-    .join("") +
-    '<li class="is-overdue">Overdue: <b>' + overdue + "</b></li>";
+  const html = rows.map(row => {
+    const share = total ? Math.round((row.value / total) * 100) : 0;
+    const sub = row.key === "Total"
+      ? (total === 1 ? "1 task on the board" : total + " tasks on the board")
+      : share + "% of the board";
 
-  document.getElementById("summary").innerHTML = html;
+    return '<li class="kpi" data-kpi="' + escapeHtml(row.key) + '">' +
+             '<span class="kpi-value">' + row.value + "</span>" +
+             '<span class="kpi-label">' + escapeHtml(row.label) + "</span>" +
+             '<span class="kpi-sub">' + escapeHtml(sub) + "</span>" +
+             '<span class="kpi-share" aria-hidden="true">' +
+               '<span style="width:' + (row.key === "Total" ? 100 : share) + '%"></span>' +
+             "</span>" +
+           "</li>";
+  }).join("");
+
+  document.getElementById("kpis").innerHTML = html;
+}
+
+/* Project chart - a stacked bar per project, busiest first.
+   Status is carried by a written count as well as by colour, and
+   each row is a button that filters the board to that project. */
+function renderProjectChart() {
+  const host = document.getElementById("project-chart");
+  const tasks = state.tasks;
+
+  if (!tasks.length) {
+    host.innerHTML = '<p class="chart-empty">No tasks yet. Add one to see the project split.</p>';
+    return;
+  }
+
+  const names = [];
+  tasks.forEach(t => { if (names.indexOf(t.project) === -1) names.push(t.project); });
+
+  const rows = names.map(name => {
+    const inProject = tasks.filter(t => t.project === name);
+    return {
+      name: name,
+      total: inProject.length,
+      overdue: inProject.filter(isOverdue).length,
+      counts: STATUSES.map(s => inProject.filter(t => t.status === s).length)
+    };
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  const widest = rows[0].total;
+
+  host.innerHTML = rows.map(row => {
+    const segments = STATUSES.map((status, i) => {
+      const n = row.counts[i];
+      if (!n) return "";
+      return '<span class="chart-seg" data-status="' + escapeHtml(status) + '"' +
+             ' style="flex:' + n + '"' +
+             ' title="' + escapeHtml(status) + ": " + n + '"></span>';
+    }).join("");
+
+    // Bar length is proportional to the busiest project, so the
+    // rows compare by volume and not just by mix.
+    const scale = Math.round((row.total / widest) * 100);
+
+    const breakdown = STATUSES
+      .map((status, i) => row.counts[i] ? row.counts[i] + " " + status.toLowerCase() : "")
+      .filter(Boolean)
+      .join(", ");
+
+    const riskNote = row.overdue
+      ? '<span class="at-risk">, incl. ' + row.overdue + " overdue</span>"
+      : "";
+
+    const pressed = state.filters.project === row.name ? "true" : "false";
+
+    return '<button type="button" class="chart-row" data-project="' + escapeHtml(row.name) + '"' +
+             ' aria-pressed="' + pressed + '">' +
+             '<span class="chart-row-top">' +
+               '<span class="chart-name">' + escapeHtml(row.name) + "</span>" +
+               '<span class="chart-total">' + row.total + "</span>" +
+             "</span>" +
+             '<span class="chart-bar" style="width:' + scale + '%">' + segments + "</span>" +
+             '<span class="chart-foot">' + escapeHtml(breakdown) + riskNote + "</span>" +
+           "</button>";
+  }).join("");
 }
 
 /* Populate every <select> from the constant lists, so the option
@@ -1213,6 +1601,18 @@ function handleDrop(event) {
   if (id) moveTask(id, column.getAttribute("data-status"));
 }
 
+/* --- Project chart rows double as a project filter --- */
+function handleChartClick(event) {
+  const row = event.target.closest("[data-project]");
+  if (!row) return;
+
+  const name = row.getAttribute("data-project");
+  const select = document.getElementById("filter-project");
+  // Clicking the project already in force clears it again.
+  select.value = select.value === name ? "" : name;
+  handleFilterChange();
+}
+
 /* --- Filters --- */
 function handleFilterChange() {
   state.filters.project  = document.getElementById("filter-project").value;
@@ -1254,6 +1654,7 @@ function init() {
   document.getElementById("filter-priority").addEventListener("change", handleFilterChange);
   document.getElementById("filter-assignee").addEventListener("input", handleFilterChange);
   document.getElementById("clear-filters").addEventListener("click", clearFilters);
+  document.getElementById("project-chart").addEventListener("click", handleChartClick);
 }
 
 init();

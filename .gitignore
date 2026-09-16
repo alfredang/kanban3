@@ -23,3 +23,7 @@ desktop.ini
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Local Claude Code tooling (vendored skill data, not part of the deliverable)
+.claude/skills/
+skills-lock.json

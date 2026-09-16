@@ -34,7 +34,9 @@ Key structural points, all in the `<script>` block of [index.html](index.html), 
 - **`STATUSES` drives the columns.** The four `<section class="column" data-status="...">` elements in the markup must stay in sync with that array; `renderBoard()` looks up `[data-dropzone="<status>"]` and `[data-count="<status>"]` per status.
 - **Events are delegated** on `#board` (click, change, and all five drag events), so re-renders never need re-binding.
 - **Every user-supplied string passes through `escapeHtml()`** before reaching `innerHTML`. Card HTML is built by string concatenation, so a new field added to `renderCard()` without `escapeHtml()` is an injection hole.
-- **Column count badges reflect the *filtered* view; the header summary strip counts *all* tasks.** This asymmetry is deliberate.
+- **Column count badges reflect the *filtered* view; the KPI rail and the project chart count *all* tasks.** This asymmetry is deliberate — the portfolio headline must not move while you filter the board.
+- **`renderKpis()` and `renderProjectChart()` are called from `renderBoard()`**, like everything else. The chart derives its project rows from `state.tasks`, not from `PROJECTS`, so a project with no tasks simply does not appear. Bar length is scaled against the busiest project so rows compare by volume, and each row is a `<button>` that toggles the project filter.
+- **Red is both the brand colour and the risk colour, so the two registers are split.** Oxblood/crimson carry structure; `--ember` is reserved for Critical priority alone; anything meaning "at risk" (overdue) is ochre `--risk`. Do not recolour overdue to red — it stops being legible against the rest of the UI.
 - **`idCounter` is module-level** and consumed by both `seedTasks()` and `addTask()` via `nextId()`, which is what keeps new IDs continuing past the seeded `UOB-ITPM-0008`.
 - **Dates are compared as `YYYY-MM-DD` strings** against `todayISO()` (local time, not UTC) — never `new Date()` arithmetic. `isOverdue()` additionally requires `status !== "Done"`.
 
@@ -42,7 +44,7 @@ Key structural points, all in the `<script>` block of [index.html](index.html), 
 
 `notifyNewTask()` is the only network call in the app. The submit flow is optimistic: validate, add the card to `state`, re-render, reset the form and toast success *before* the fetch is fired. The fetch failing must only ever produce a warning toast — the card stays. Any change here must preserve that isolation.
 
-`FORMSUBMIT_ENDPOINT` ([index.html:739](index.html#L739)) ships as the placeholder `YOUR_EMAIL@example.com`. FormSubmit requires a one-time activation: the first submission emails a confirmation link to that address, and nothing delivers until it is clicked. With the placeholder in place, the "email notification failed" warning toast on every submit is expected, not a bug.
+`FORMSUBMIT_ENDPOINT` ([index.html:1043](index.html#L1043)) ships as the placeholder `YOUR_EMAIL@example.com`. FormSubmit requires a one-time activation: the first submission emails a confirmation link to that address, and nothing delivers until it is clicked. With the placeholder in place, the "email notification failed" warning toast on every submit is expected, not a bug.
 
 ## Verification
 
@@ -62,7 +64,15 @@ sed -n '/^<script>$/,/^<\/script>$/p' index.html | sed '1d;$d' > "$SCRATCH/app.j
 node --check "$SCRATCH/app.js"
 ```
 
-A shim stubbing `document.getElementById`/`querySelector`/`querySelectorAll`/`createElement`, `fetch` (rejecting), and `setTimeout` is enough to `eval` the script and assert on `state`, `applyFilters()`, `moveTask()`, `deleteTask()`, `isOverdue()`, `escapeHtml()` and the HTML returned by `renderCard()` — including escaping assertions against `<script>`/`<img onerror>` payloads.
+A shim stubbing `document.getElementById`/`querySelector`/`querySelectorAll`/`createElement`, `fetch` (rejecting), and `setTimeout` is enough to run the script and assert on `state`, `applyFilters()`, `moveTask()`, `deleteTask()`, `isOverdue()`, `escapeHtml()`, `renderKpis()`, `renderProjectChart()` and the HTML returned by `renderCard()` — including escaping assertions against `<script>`/`<img onerror>` payloads.
+
+Do not use a bare `eval(src)`: the script's top-level `const`/`function` declarations land in the harness's own scope and collide with the names the harness binds. Run it in its own function scope and hand the bindings back instead:
+
+```js
+const app = new Function(src + ";return {state,applyFilters,renderCard,renderKpis,renderProjectChart};")();
+```
+
+Have the shim's `getElementById` memoise its elements, so the harness can read back what `renderKpis()`/`renderProjectChart()` wrote to `innerHTML`.
 
 **3. Browser.** `start index.html` can report success without actually launching anything on this machine; launch the browser binary directly instead:
 
@@ -74,4 +84,4 @@ Drag-and-drop behaviour and the sub-768px stacking cannot be verified headlessly
 
 ## Branding
 
-Internal demo only. Use the neutral "UOB IT PMO" text wordmark and the corporate blue palette in `:root`. Do not add UOB's real logo or trademarks, or make the UI imitate an official UOB system.
+Internal demo only. Use the neutral "UOB IT PMO" text wordmark and the red palette in `:root`. Do not add UOB's real logo or trademarks, or make the UI imitate an official UOB system.

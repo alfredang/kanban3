@@ -1,0 +1,22 @@
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+credentials*
+
+# Dependencies (none used, but keep it out if ever added)
+node_modules/
+
+# Editor / OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Claude Code local state
+.claude/settings.local.json

@@ -6,6 +6,8 @@ and it stores nothing.
 
 **Live demo:** https://alfredang.github.io/kanban3/
 
+![The board with the Add Task form, filter bar and four columns](docs/screenshot.png)
+
 ## Running it locally
 
 Download `index.html` and **double-click it**. That's the whole setup — no build step,

@@ -20,3 +20,6 @@ desktop.ini
 
 # Claude Code local state
 .claude/settings.local.json
+
+# Playwright MCP scratch output
+.playwright-mcp/

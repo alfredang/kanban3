@@ -1,7 +1,7 @@
 ---
 description: Security-scan, push to GitHub, deploy GitHub Pages, and update README + About section
 argument-hint: "[github repo url]"
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_resize, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_close
 ---
 
 # Publish this project to GitHub
@@ -117,13 +117,40 @@ Never push on a scan you did not actually read.
    (normally `https://<owner>.github.io/<repo>/`). For a single-file app whose entry is not `index.html`,
    append the filename to the URL.
 
-## Step 4 — README
+## Step 4 — Screenshot with Playwright
+
+Capture a current screenshot of the app for the README. The Playwright MCP browser **blocks the
+`file:` protocol**, so serve the directory over HTTP first rather than opening `index.html` directly:
+
+```bash
+python -m http.server 8765 &   # from the repo root; then curl -sI http://localhost:8765/index.html
+```
+
+Then, with the Playwright MCP tools:
+
+1. `browser_resize` to 1440x900 — a desktop viewport, so the columns render side by side rather
+   than stacked at the mobile breakpoint.
+2. `browser_navigate` to `http://localhost:8765/index.html`.
+3. `browser_take_screenshot` with `fullPage: true` and `filename` set to an **absolute** path at
+   `<repo>/docs/screenshot.png`.
+4. **Read the PNG back and actually look at it** before committing it. It must show the real,
+   populated UI — not a blank page, an error, or a half-loaded layout. If it is wrong, fix and retake.
+5. `browser_close`, stop the HTTP server, and delete the `.playwright-mcp/` scratch directory
+   Playwright leaves in the repo root (or add it to `.gitignore`).
+
+If Playwright is unavailable, say so and continue without the screenshot — do not block the publish
+on it, and do not leave a broken image link in the README.
+
+## Step 5 — README
 
 Create or update `README.md`. Do not blow away a good existing README — merge into it.
 It should contain:
 
 - Project title and a one-or-two-sentence description of what it actually does (read the source; do not guess).
 - **Live demo:** the Pages URL from Step 3, as a link near the top.
+- **The screenshot from Step 4**, just under the live-demo link:
+  `![<description of what is on screen>](docs/screenshot.png)` — a relative path, so it renders both
+  on GitHub and on Pages. Give it real alt text, not "screenshot".
 - How to run it locally (for this project: open `index.html` by double-clicking — no build step, no server).
 - Key features, taken from the real code.
 - Notable constraints/caveats worth knowing (e.g. state resets on refresh, no persistence, any placeholder config the user must fill in).
@@ -131,7 +158,7 @@ It should contain:
 
 Keep it honest and concise — no invented benchmarks, no features that do not exist. Commit and push it.
 
-## Step 5 — About section
+## Step 6 — About section
 
 Set the repo's description, homepage (the Pages URL) and topics:
 
@@ -149,7 +176,7 @@ gh api -X PATCH repos/{owner}/{repo} -F has_pages=true 2>/dev/null || true
 
 Verify: `gh repo view <owner>/<repo> --json description,homepageUrl,repositoryTopics`
 
-## Step 6 — Report
+## Step 7 — Report
 
 Finish with a compact summary:
 
@@ -157,6 +184,7 @@ Finish with a compact summary:
 - Commit pushed (sha + message) and branch
 - Workflow run status and link
 - **Live site URL** (verify it responds: `curl -sI <url> | head -1` — a fresh Pages deploy can take a minute or two; if it 404s, say so and tell the user to retry shortly rather than claiming success)
+- Screenshot captured (and confirmed it renders in the README)
 - README and About section changes
 
 Flag anything you could not complete and why.
